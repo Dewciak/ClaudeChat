@@ -163,12 +163,12 @@ if (key in INTENTS) {
     process.stdout.write(`${when} [${r.intent}] ${r.from} -> ${(r.to || []).join(',')}: ${r.text}\n`);
   }
 } else if (key === 'name' || key === 'rename') {
-  const label = rest.join(' ').trim();
-  if (!label) die('usage: cc-msg name "<short-handle>"');
+  const arg = rest.join(' ').trim();
+  if (!arg) die('usage: cc-msg name "<role-prefix>-<activity>"  e.g. fe-checkout');
   if (!SELF) die('Not inside a Claude Code session.');
-  const final = bus.setLabel(SELF, label);
+  const final = bus.applyName(SELF, arg);
   if (!final) die('This session is not registered yet.');
-  process.stdout.write(`This session is now "${final}"${final !== label ? ` (taken — using "${final}")` : ''}.\n`);
+  process.stdout.write(`This session is now "${final}" (address by id: ${final.split('-')[0]}).\n`);
 } else if (key === 'inbox') {
   if (!SELF) die('Not inside a Claude Code session.');
   const msgs = bus.drainInbox(SELF);

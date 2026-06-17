@@ -13,14 +13,20 @@ if (!sid) { process.exit(0); }
 const cwd = input.cwd || process.cwd();
 bus.ensure();
 
-// On resume the session keeps its id — reuse its previous name so addressing stays stable.
+// Dynamic name = "<id>-<role>-<activity>". id is stable (addressing); role is b/f;
+// activity tracks the current focus (updated by `cc-msg status`). On resume we keep
+// the prior role/activity so the name is stable across restarts.
 const prior = bus.readEntry(bus.regFile(sid)) || bus.listArchive().find((e) => e.sessionId === sid);
-let label;
-if (process.env.CC_TAB && process.env.CC_TAB.trim()) label = bus.uniqueLabel(process.env.CC_TAB.trim(), sid);
-else if (prior && prior.label) label = prior.label;
-else label = bus.uniqueLabel(bus.defaultBase(cwd), sid);
-
-bus.saveEntry({ sessionId: sid, label, cwd });
+const ccTab = process.env.CC_TAB && process.env.CC_TAB.trim();
+const entry = {
+  sessionId: sid, cwd,
+  id: bus.shortId(sid),
+  role: bus.roleFor(cwd, ccTab) || (prior && prior.role) || '',
+  activity: bus.slugActivity(ccTab || (prior && prior.activity) || bus.defaultBase(cwd)),
+};
+entry.label = bus.composeLabel(entry);
+const label = entry.label;
+bus.saveEntry(entry);
 try { fs.closeSync(fs.openSync(bus.inboxFile(sid), 'a')); } catch {}
 
 // Deliver anything queued while this session was gone (e.g. messages sent while closed,
@@ -44,9 +50,11 @@ let ctx =
   `CROSS-SESSION COORDINATION (ClaudeChat) is active. You are session "${label}" working in ${cwd}.\n` +
   `Other live sessions (name -> project, current focus):\n${otherList}\n` +
   `\n` +
-  `As soon as you understand your task, name yourself + announce it so peers stay aware:\n` +
-  `  cc-msg name "<short-handle>"      e.g. "be-orders", "fe-checkout"\n` +
-  `  cc-msg status "<one-line focus>"  (update whenever your focus changes)\n` +
+  `Your name is DYNAMIC: "<id>-<role>-<activity>" (e.g. "${label}"). The id stays fixed,\n` +
+  `the activity updates from your status. Address peers by their ID (the leading token) —\n` +
+  `it never changes; the rest is just a human-readable hint of what they're doing now.\n` +
+  `Announce your focus (this also updates your name): cc-msg status "<one-line focus>".\n` +
+  `Set role/activity explicitly if needed: cc-msg name "fe-checkout" (role f, activity checkout).\n` +
   `\n` +
   `DON'T PANIC over breakage that isn't yours. Before you stop / "fix" a build/type/test\n` +
   `failure, run: cc-msg who. If a peer is MID-CHANGE in the failing area, it's likely\n` +

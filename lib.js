@@ -44,6 +44,34 @@ function readEntry(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
 }
 
+// ---- Dynamic name pieces: label = "<id>-<role>-<activity>" ----
+// id stays stable (addressing), activity tracks the current focus (from `cc-msg status`).
+// Stable, terminal-agnostic id: a short prefix of the session id. Unique enough to
+// address by and never changes for the life of the session.
+function shortId(sid) {
+  return String(sid || '').replace(/-/g, '').slice(0, 4) || 'id';
+}
+function roleFor(cwd, name) {
+  const n = String(name || '').toLowerCase();
+  if (/^(be|b|backend|api|server)([-_.]|$)/.test(n)) return 'b';
+  if (/^(fe|f|front|frontend|web|client)([-_.]|$)/.test(n)) return 'f';
+  const c = String(cwd || '').toLowerCase();
+  if (/(front|client|web|frontend|[-/]fe[-/])/.test(c)) return 'f';
+  if (/(backend|server|[-/.]api|[-/]be[-/])/.test(c)) return 'b';
+  return '';
+}
+function slugActivity(text) {
+  let s = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase()
+    .replace(/^(done|wip|todo|fix|fixed|robi[eę]|adding|dodaj[eę])\s*[:\-]?\s*/i, '');
+  const words = s.split(' ').filter(Boolean).slice(0, 4).join('-');
+  let out = words.replace(/[^a-z0-9ąćęłńóśźż-]/gi, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  if (out.length > 28) out = out.slice(0, 28).replace(/-+$/, '');
+  return out || 'idle';
+}
+function composeLabel(e) {
+  return [e.id, e.role, e.activity].filter(Boolean).join('-') || (e.id || 'tab');
+}
+
 // Default session name: git repo name, else dir name, else "tab" for a bare home dir.
 function defaultBase(cwd) {
   let root = null;
@@ -112,14 +140,32 @@ function setLabel(sid, label) {
 }
 
 // unstable=true => "mid-change, shared build/types/tests may be transiently broken".
+// Also drives the DYNAMIC name: activity (slug of the status) is recomputed and folded
+// into the label "<id>-<role>-<activity>" so the name reflects what the session does now.
 function setStatus(sid, text, unstable) {
   const e = readEntry(regFile(sid));
   if (!e) return false;
-  e.status = text;
+  e.status = text;             // full text (board / who)
   e.unstable = !!unstable;
   e.statusTs = now();
+  e.activity = slugActivity(text); // short slug (label)
+  if (e.id) e.label = composeLabel(e);
   saveEntry(e);
   return true;
+}
+
+// Set/refine the role (b/f) and/or initial activity from a name argument, then recompose.
+function applyName(sid, text) {
+  const e = readEntry(regFile(sid));
+  if (!e) return null;
+  const r = roleFor(e.cwd, text);
+  if (r) e.role = r;
+  const rest = String(text).replace(/^(be|b|backend|api|server|fe|f|front|frontend|web|client)[-_.]\s*/i, '');
+  e.activity = slugActivity(rest || text);
+  if (!e.id) e.id = shortId(sid);
+  e.label = composeLabel(e);
+  saveEntry(e);
+  return e.label;
 }
 
 // Resolve a name to LIVE sessions. "all"/"*" => everyone except excludeSid;
@@ -203,6 +249,7 @@ module.exports = {
   ROOT, BUS, REG, INBOX, SESSIONS, REVIVING,
   ensure, now, readStdinJson, regFile, inboxFile, cursorFile, seenFile, readEntry,
   defaultBase, listTabs, saveEntry, touch, removeEntry, labelOf, uniqueLabel, setLabel,
-  setStatus, resolveTargets, appendMessage, drainInbox, appendLog, readLog,
+  setStatus, applyName, resolveTargets, appendMessage, drainInbox, appendLog, readLog,
   listArchive, resolveDead, recentlyRevived, markReviving,
+  shortId, roleFor, slugActivity, composeLabel,
 };

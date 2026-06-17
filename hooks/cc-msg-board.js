@@ -14,7 +14,9 @@ if (!sid) { process.exit(0); }
 const existing = bus.readEntry(bus.regFile(sid));
 if (!existing) {
   const cwd = input.cwd || process.env.HOME;
-  bus.saveEntry({ sessionId: sid, label: bus.uniqueLabel(bus.defaultBase(cwd), sid), cwd });
+  const e = { sessionId: sid, cwd, id: bus.shortId(sid), role: bus.roleFor(cwd), activity: bus.slugActivity(bus.defaultBase(cwd)) };
+  e.label = bus.composeLabel(e);
+  bus.saveEntry(e);
 } else {
   bus.touch(sid);
 }
