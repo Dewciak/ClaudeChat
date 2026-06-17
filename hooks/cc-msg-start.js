@@ -50,12 +50,10 @@ let ctx =
   `CROSS-SESSION COORDINATION (ClaudeChat) is active. You are session "${label}" working in ${cwd}.\n` +
   `Other live sessions (name -> project, current focus):\n${otherList}\n` +
   `\n` +
-  `Your name is "<id>-<role>-<activity>" (e.g. "${label}"). The id is fixed — peers address\n` +
-  `you by it. The activity = your MAIN / thematic task. Set it with cc-msg name, and change it\n` +
-  `ONLY when the main task changes — NOT for sub-steps ("change this section, then that"):\n` +
-  `  general front -> cc-msg name "fe-general"    admin front -> cc-msg name "fe-admin"\n` +
-  `  a feature     -> cc-msg name "fe-<feature>"  backend API -> cc-msg name "be-orders"\n` +
-  `Use cc-msg status "<one-line>" for granular progress — it shows on the board but does NOT rename you.\n` +
+  `Your name is "<id>-<role>-<activity>" (e.g. "${label}"). The id is fixed — peers address you by it.\n` +
+  `The activity AUTO-FOLLOWS your cc-msg status, so sessions in the same repo differ by what they DO.\n` +
+  `Just keep posting cc-msg status "<one-line focus>" and your name tracks it automatically.\n` +
+  `To PIN a fixed name (stop auto-updates) use cc-msg name "fe-admin" / "be-orders".\n` +
   `\n` +
   `DON'T PANIC over breakage that isn't yours. Before you stop / "fix" a build/type/test\n` +
   `failure, run: cc-msg who. If a peer is MID-CHANGE in the failing area, it's likely\n` +

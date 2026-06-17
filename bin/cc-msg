@@ -135,13 +135,13 @@ if (key in INTENTS) {
 } else if (key === 'busy') {
   const text = rest.join(' ').trim() || 'mid-change';
   if (!SELF) die('Not inside a Claude Code session.');
-  if (!bus.setStatus(SELF, text, true)) die('This session is not registered yet.');
+  if (!bus.setStatus(SELF, text, true, true)) die('This session is not registered yet.');
   bus.appendLog({ from: FROM, to: ['*board'], intent: 'busy', text, ts: bus.now() });
   process.stdout.write(`Marked MID-CHANGE: ${text}\n`);
 } else if (key === 'ready' || key === 'stable') {
   const text = rest.join(' ').trim() || 'stable';
   if (!SELF) die('Not inside a Claude Code session.');
-  if (!bus.setStatus(SELF, text, false)) die('This session is not registered yet.');
+  if (!bus.setStatus(SELF, text, false, true)) die('This session is not registered yet.');
   bus.appendLog({ from: FROM, to: ['*board'], intent: 'ready', text, ts: bus.now() });
   process.stdout.write(`Marked stable: ${text}\n`);
 } else if (key === 'who' || key === 'board') {

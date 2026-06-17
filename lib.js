@@ -142,12 +142,18 @@ function setLabel(sid, label) {
 // Granular progress for the board / `who`. Does NOT change the session NAME — the name
 // tracks the MAIN thematic task (set via applyName), not every micro status update.
 // unstable=true => "mid-change, shared build/types/tests may be transiently broken".
-function setStatus(sid, text, unstable) {
+function setStatus(sid, text, unstable, noRename) {
   const e = readEntry(regFile(sid));
   if (!e) return false;
   e.status = text;
   e.unstable = !!unstable;
   e.statusTs = now();
+  // Name auto-follows the status so same-repo sessions differ by what they DO —
+  // unless pinned (`cc-msg name`) or this is a flag update (busy/ready -> noRename).
+  if (!noRename && !e.pinned && e.id) {
+    const a = slugActivity(text);
+    if (a && a !== 'idle') { e.activity = a; e.label = composeLabel(e); }
+  }
   saveEntry(e);
   return true;
 }
@@ -163,6 +169,7 @@ function applyName(sid, text) {
   const rest = String(text).replace(/^(be|b|backend|api|server|fe|f|front|frontend|web|client)[-_.]\s*/i, '');
   e.activity = slugActivity(rest || text);
   if (!e.id) e.id = shortId(sid);
+  e.pinned = true;   // explicit name = pin; status no longer auto-changes it
   e.label = composeLabel(e);
   saveEntry(e);
   return e.label;
